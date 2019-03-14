@@ -9,7 +9,7 @@ Created on Tue Feb 19 16:54:54 2019
 import matplotlib.pyplot as plt
 import numpy as np
 
-from scipy.interpolate import UnivariateSpline
+
 
 
 
