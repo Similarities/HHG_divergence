@@ -1,5 +1,5 @@
 # HHG_divergence
-spectral divergence for High Harmonic spectrum, reciprocal lineout, FWHM fit tool
+spectral divergence for High Harmonic spectrum, multi-lineouts with nonlinear dependency (e.g ~reciprocal), FWHM fit tool
 
 High harmonic radiation is for instance emitted when realitvistic laser pulses interact with a solid surface. 
 It has to be understood as an relativistic phenomena: relativistic electron oscillations reflect the incident 
