@@ -13,6 +13,7 @@ order N, leading to a spatial narrowing of the HHG lines on the detector.
 This programm is a simple tool to determine the HHG divergence via lineouts over each harmonic number N. 
 In detail, each lineout takes a integration over a number of lines into account (ROI_y) and determines 
 the FWHM via stepfunction. Grating equation has to be inserted into the code. 
-should be compatible to Python 3.x. Reads 16 bit tiff files.
+is not yet compatible to Python 3.x, since some input parameters (e.g. ROI_y have to be converted to int, 
+which python 3 interprets as float.) . Reads 16 bit tiff files.
 
 Example pictures show its output.
