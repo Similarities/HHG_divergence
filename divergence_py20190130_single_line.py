@@ -13,7 +13,7 @@ import random
 marker_style = [',', '+', '.', 'v', '*', "P", "H", 'x', "D", ">"]
 
 
-class Open_and_Plot_Picture:
+class FwhmImageProcessing:
 
     def __init__(self, filename, x_min, x_max, lambda_fundamental, px_range, harmonic_number, file_discription):
         self.filename = filename
@@ -59,28 +59,32 @@ class Open_and_Plot_Picture:
         # for testing, inverse function of nm-to px
         x_axis_in_nm = np.empty([2048, 1])
         for x in range(0, self.y_max):
-                x_axis_in_nm[x] = 1.27877896e-06 * x ** 2 - 1.37081526e-02 * x + 3.46785380e+01
+            x_axis_in_nm[x] = 1.27877896e-06 * x ** 2 - 1.37081526e-02 * x + 3.46785380e+01
         return x_axis_in_nm
 
-    def select_harmonic(self):
+    def select_harmonic_in_px(self):
         # visualisation of taken lineouts on picture
         # borders in nm
-        self.result_array[0, 3] = self.lambda_fundamental / self.harmonic_selected
         harmonic_in_nm = self.lambda_fundamental / self.harmonic_selected
-        #print(self.lambda_fundamental, self.harmonic_selected, "fundamental wavelength, selected harmonic number N")
+        # print(self.lambda_fundamental, self.harmonic_selected, "fundamental wavelength, selected harmonic number N")
         a = int(7.79104482e-01 * harmonic_in_nm ** 2 - 1.24499534e+02 * harmonic_in_nm + 3.38549944e+03)
         self.border_up = int(a - self.pixel_range / 2)
-        border_down = int(a + self.pixel_range / 2)
-        print(self.border_up, border_down, "ROI in px")
+        self.plot_roi_on_image(0, 2048)
+        print(self.border_up, self.border_up+self.pixel_range, "ROI in px")
+        self.initialize_result_array(a)
+        return self.border_up
 
+    def plot_roi_on_image(self, xmin, xmax):
+        plt.figure(1)
+        plt.hlines(self.border_up, xmin=xmin, xmax=xmax, color="m", linewidth=0.5)
+        plt.hlines(self.border_up + self.pixel_range, xmin=xmin, xmax=xmax, color="w", linewidth=1.)
+        plt.show()
+
+    def initialize_result_array(self, a):
+        self.result_array[0, 3] = self.lambda_fundamental / self.harmonic_selected
         self.result_array[0, 0] = self.harmonic_selected
         self.result_array[0, 1] = a
-
-        plt.figure(1)
-        plt.hlines(self.border_up, xmin=0, xmax=2048, color="m", linewidth=0.5)
-        plt.hlines(border_down, xmin=0, xmax=2048, color="w", linewidth=1.)
-        plt.show()
-        return self.border_up
+        return self.result_array
 
     def sum_over_pixel_range_y(self):
         self.line_out = self.x_backsubstracted[self.border_up: self.border_up + self.pixel_range, ::]
@@ -93,50 +97,44 @@ class Open_and_Plot_Picture:
         return self.line_out
 
     def integrated_signal_in_lineout(self):
-        integrated = np.sum(self.line_out, axis = 0)
+        integrated = np.sum(self.line_out, axis=0)
         print(integrated, 'counts in ROI')
         return integrated
 
-    def plot_x_y(self, x,y, name, plot_number, axis_x_name, axis_y_name):
+    def plot_x_y(self, x, y, name, plot_number, axis_x_name, axis_y_name):
         plt.figure(plot_number)
         plt.plot(x, y, label=name)
         plt.xlabel(str(axis_x_name))
         plt.ylabel(str(axis_y_name))
 
-
     def calibrate_px_to_msr(self):
-        self.line_out_x[::] = self.line_out_x[::]*self.calibration_to_msr
+        self.line_out_x[::] = self.line_out_x[::] * self.calibration_to_msr
         return self.line_out_x
 
-
-    def find_FWHM(self):
-        # creates x-axis array
+    def step_function_for_fwhm(self):
         self.sum_over_pixel_range_y()
-        print(len(self.line_out), len(self.line_out_x))
-        self.plot_x_y(self.line_out_x, self.line_out, 'line-out un-corrected', 2, 'mrad', 'counts')
+        self.plot_x_y(self.line_out_x, self.line_out, 'line-out un-corrected', 2, 'px', 'counts')
         maximum = np.amax(self.line_out[::])
         minimum = np.amin(self.line_out[::])
         half_max = (maximum - minimum) / 2
         self.correction_background(minimum)
-        self.plot_x_y(self.line_out_x, self.line_out, 'line-out corrected', 2, 'mrad', 'counts')
-
+        self.plot_x_y(self.line_out_x, self.line_out, 'line-out corrected', 2, 'px', 'counts')
         # width of step function is FWHM
         d = np.sign(half_max - self.line_out[::]) - 1
         self.calibrate_px_to_msr()
         self.plot_x_y(self.line_out_x, d, 'stepfunction', 3, 'mrad', 'value')
-        self.result_array[0, 2] =  (np.amax(np.nonzero(d)) - np.amin(np.nonzero(d)))
+        self.result_array[0, 2] = (np.amax(np.nonzero(d)) - np.amin(np.nonzero(d)))
+        print(self.result_array)
         return self.result_array
 
 
 # insert the following ('filepath/picture_name.tif', border in picture L(int), border in picture R (int), fundamental frequency (float), ROI_y(px), harmonic number (int), "picture name for plot")
-# @ mingyuan: "picture name for plot" is unneccessary, try different ROI_y ranges, set boundaryL close to the onset of the detection range, put
-# put the correct fundamental frequency in
-Picture1 = Open_and_Plot_Picture('second_run/spectro1_secondrun__Wed Jan 30 2019_16.23.08_30.tif', 100, 1200, 800., 50,
-                                 25, "20190123_12 z1600 GVD900 PPin")
+Picture1 = FwhmImageProcessing('rotated\spectro1__Wed Jan 30 2019_11.13.52_14.tif', 100, 1200, 800., 50,
+                               25, "20190123_xx")
 Picture1.open_file()
 Picture1.background()
 
-Picture1.select_harmonic()
-Picture1.find_FWHM()
+Picture1.select_harmonic_in_px()
+Picture1.step_function_for_fwhm()
 Picture1.integrated_signal_in_lineout()
 plt.show()
