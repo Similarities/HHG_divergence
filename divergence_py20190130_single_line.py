@@ -1,3 +1,4 @@
+
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
@@ -17,12 +18,16 @@ class FwhmImageProcessing:
 
     def __init__(self, filename, x_min, x_max, lambda_fundamental, px_range, harmonic_number, file_discription):
         self.filename = filename
+        # px size full picture * usually 0 - 2048
         self.y_min = 0
         self.y_max = 2048
+        # defined Roi in x to avoid boarder effects
         self.x_min = x_min
         self.x_max = x_max
+        # integration ROI y for each HHG line
         self.pixel_range = px_range
         self.picture = np.empty([])
+        self.integrated = np.empty([])
         self.x_backsubstracted = np.empty([2048, 2048])
         self.lambda_fundamental = lambda_fundamental
         self.line_out = np.zeros([self.y_max, 1])
@@ -30,9 +35,13 @@ class FwhmImageProcessing:
         self.fwhm_for_harmonic = np.zeros([2048, 3])
         self.calibration_to_msr = 17.5 / 2048
         self.full_divergence = 17.5
+        self.harmonic_counter = int
+        self.integrated_signal = np.zeros([20, 4])  # '?'
+        self.normalization_factor_mrad = np.zeros([20, 1])
         self.file_description = file_discription
         self.harmonic_selected = harmonic_number
-        self.border_up = self.select_harmonic_in_px()
+        self.border_up = int
+        # result array [0,1] = harmonic number, [0,2]= Fwhm [0,1] = px position, [0,3] = nm position, [0,4] = FWHM of this
         self.result_array = np.zeros([1, 4])
 
     def open_file(self):
@@ -130,3 +139,4 @@ Picture1.select_harmonic_in_px()
 Picture1.step_function_for_fwhm()
 Picture1.integrated_signal_in_lineout()
 plt.show()
+
