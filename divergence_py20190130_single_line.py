@@ -32,8 +32,9 @@ class FwhmImageProcessing:
         self.full_divergence = 17.5
         self.file_description = file_discription
         self.harmonic_selected = harmonic_number
-        self.border_up = self.select_harmonic_in_px()
         self.result_array = np.zeros([1, 4])
+        self.border_up = self.select_harmonic_in_px()
+
 
     def open_file(self):
         self.picture = plt.imread(self.filename)
@@ -73,6 +74,7 @@ class FwhmImageProcessing:
         plt.show()
 
     def initialize_result_array(self, a):
+        print('xxxxxxxxxxxxx', self.result_array)
         self.result_array[0, 3] = self.lambda_fundamental / self.harmonic_selected
         self.result_array[0, 0] = self.harmonic_selected
         self.result_array[0, 1] = a
