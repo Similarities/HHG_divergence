@@ -18,13 +18,10 @@ class FwhmImageProcessing:
 
     def __init__(self, filename, x_min, x_max, lambda_fundamental, px_range, harmonic_number, file_discription):
         self.filename = filename
-        # px size full picture * usually 0 - 2048
         self.y_min = 0
         self.y_max = 2048
-        # defined Roi in x to avoid boarder effects
         self.x_min = x_min
         self.x_max = x_max
-        # integration ROI y for each HHG line
         self.pixel_range = px_range
         self.picture = np.empty([])
         self.integrated = np.empty([])
@@ -35,8 +32,6 @@ class FwhmImageProcessing:
         self.fwhm_for_harmonic = np.zeros([2048, 3])
         self.calibration_to_msr = 17.5 / 2048
         self.full_divergence = 17.5
-        self.harmonic_counter = int
-        self.integrated_signal = np.zeros([20, 4])  # '?'
         self.normalization_factor_mrad = np.zeros([20, 1])
         self.file_description = file_discription
         self.harmonic_selected = harmonic_number
@@ -64,10 +59,7 @@ class FwhmImageProcessing:
         return x_axis_in_nm
 
     def select_harmonic_in_px(self):
-        # visualisation of taken lineouts on picture
-        # borders in nm
         harmonic_in_nm = self.lambda_fundamental / self.harmonic_selected
-        # print(self.lambda_fundamental, self.harmonic_selected, "fundamental wavelength, selected harmonic number N")
         a = int(7.79104482e-01 * harmonic_in_nm ** 2 - 1.24499534e+02 * harmonic_in_nm + 3.38549944e+03)
         self.border_up = int(a - self.pixel_range / 2)
         self.plot_roi_on_image(0, 2048)
@@ -82,7 +74,6 @@ class FwhmImageProcessing:
         plt.show()
 
     def initialize_result_array(self, a):
-        print('xxxxxxxxxxxxx', self.result_array)
         self.result_array[0, 3] = self.lambda_fundamental / self.harmonic_selected
         self.result_array[0, 0] = self.harmonic_selected
         self.result_array[0, 1] = a
@@ -100,7 +91,6 @@ class FwhmImageProcessing:
 
     def integrated_signal_in_lineout(self):
         integrated = np.sum(self.line_out, axis=0)
-        print(integrated, 'counts in ROI')
         return integrated
 
     def plot_x_y(self, x, y, name, plot_number, axis_x_name, axis_y_name):
@@ -135,7 +125,6 @@ Picture1 = FwhmImageProcessing('rotated\spectro1__Wed Jan 30 2019_11.13.52_14.ti
                                25, "20190123_xx")
 Picture1.open_file()
 Picture1.background()
-
 Picture1.select_harmonic_in_px()
 Picture1.step_function_for_fwhm()
 Picture1.integrated_signal_in_lineout()
