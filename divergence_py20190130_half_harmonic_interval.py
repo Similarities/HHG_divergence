@@ -1,13 +1,16 @@
+# !/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
 Created on Tue Feb 19 16:54:54 2019
+
 @author: similarities
 """
 
 import matplotlib.pyplot as plt
 import numpy as np
+import random
 
-
+marker_style = [',', '+', '.', 'v', '*', "P", "H", 'x', "D", ">"]
 
 
 class FwhmImageProcessing:
@@ -32,7 +35,7 @@ class FwhmImageProcessing:
         self.file_description = self.filename
         self.harmonic_selected = harmonic_number
         self.result_array = np.zeros([1, 5])
-        self.border_up = self.select_harmonic_in_px()
+        self.border_up, self.border_down = self.energy_range()
 
     def open_file(self):
         self.picture = plt.imread(self.filename)
@@ -43,7 +46,6 @@ class FwhmImageProcessing:
         for x in range(0, self.y_max):
             self.x_backsubstracted[::, x] = self.picture[::, x] - back_mean[x]
         plt.figure(1)
-        plt.ylim(100, 1000)
         plt.imshow(self.x_backsubstracted)
 
     def grating_function(self):
@@ -53,18 +55,29 @@ class FwhmImageProcessing:
             x_axis_in_nm[x] = 1.27877896e-06 * x ** 2 - 1.37081526e-02 * x + 3.46785380e+01
         return x_axis_in_nm
 
-    def select_harmonic_in_px(self):
-        harmonic_in_nm = self.lambda_fundamental / self.harmonic_selected
-        a = int(7.79104482e-01 * harmonic_in_nm ** 2 - 1.24499534e+02 * harmonic_in_nm + 3.38549944e+03)
-        self.border_up = int(a - self.pixel_range / 2)
+    def nm_in_px(self, energy_nm):
+        a = int(7.79104482e-01 * energy_nm ** 2 - 1.24499534e+02 * energy_nm + 3.38549944e+03)
+        return a
+
+    def energy_range(self):
+        previous_harmonic = self.lambda_fundamental / (self.harmonic_selected - 0.5)
+        next_harmonic = self.lambda_fundamental / (self.harmonic_selected + 0.5)
+        self.border_up = np.int(self.nm_in_px(previous_harmonic))
+        self.border_down = np.int(self.nm_in_px(next_harmonic))
+        print(self.border_up, self.border_down, "ROI in px")
+        self.pixel_range = np.int(self.border_down - self.border_up)
+        print(self.pixel_range, 'ROI in pixel range')
         self.plot_roi_on_image(0, 2048)
-        print(self.border_up, self.border_up + self.pixel_range, "ROI in px")
-        return self.border_up
+
+        return self.border_up, self.border_down
 
     def plot_roi_on_image(self, xmin, xmax):
         plt.figure(1)
-        plt.hlines(self.border_up, xmin=xmin, xmax=xmax, color="m", linewidth=0.5)
-        plt.hlines(self.border_up + self.pixel_range, xmin=xmin, xmax=xmax, color="w", linewidth=1.)
+        plt.hlines(self.border_up, xmin=xmin, xmax=xmax, color="y", linewidth=1)
+        plt.hlines(self.border_down, xmin=xmin, xmax=xmax, color="w", linewidth=1.)
+        harmonic_in_nm = self.lambda_fundamental / self.harmonic_selected
+        plt.hlines(np.int(self.nm_in_px(harmonic_in_nm)), xmin=xmin, xmax=xmax,
+                  color='r', linewidth=0.5)
 
     def initialize_result_array(self):
         self.result_array[0, 3] = self.lambda_fundamental / self.harmonic_selected
@@ -72,7 +85,7 @@ class FwhmImageProcessing:
         return self.result_array
 
     def sum_over_pixel_range_y(self):
-        self.line_out = self.x_backsubstracted[self.border_up: self.border_up + self.pixel_range, ::]
+        self.line_out = self.x_backsubstracted[self.border_up: self.border_down, ::]
         self.line_out = np.sum(self.line_out, axis=0)
         self.line_out = self.line_out[self.x_min:self.x_max]
         return self.line_out
@@ -113,17 +126,18 @@ class FwhmImageProcessing:
         self.line_out_x = self.calibrate_px_to_msr(self.line_out_x)
         self.plot_x_y(self.line_out_x, d, 'stepfunction', 3, 'mrad', 'value')
         self.result_array[0, 1] = self.calibration_to_msr * (np.amax(np.nonzero(d)) - np.amin(np.nonzero(d)))
-        print(self.calibration_to_msr*(np.amax(np.nonzero(d)) - np.amin(np.nonzero(d))), 'FWHM')
+        print(self.calibration_to_msr * (np.amax(np.nonzero(d)) - np.amin(np.nonzero(d))), 'FWHM')
         return self.result_array
 
     def px_in_nm(self, px_number):
         return 1.24679344e-06 * px_number ** 2 - 1.65566701e-02 * px_number + 5.22598053e+01
 
     def delta_energy(self):
-        lower = int(self.border_up + self.pixel_range / 2)
-        upper = int(self.border_up + self.pixel_range)
+        lower = int(self.border_up)
+        upper = int(self.border_down)
         delta = self.px_in_nm(lower) - self.px_in_nm(upper)
-        delta_vs_energy = delta / self.px_in_nm(self.border_up + self.pixel_range / 2)
+        # Delta Energy / harmonic all in nm
+        delta_vs_energy = delta / (self.lambda_fundamental / self.harmonic_selected)
         self.result_array[0, 4] = delta_vs_energy
         return delta_vs_energy, delta, self.result_array
 
@@ -141,17 +155,16 @@ class FwhmImageProcessing:
         result = self.prepare_header()
         print(self.result_array)
         print('saved data')
-        np.savetxt(self.file_description[31:42] + '_' + self.file_description[-6:-4] + ".txt", result, delimiter=' ',
-                   header='string', comments='',
-                   fmt='%s')
+        np.savetxt(self.file_description[33:42] + self.file_description[-6:-4] + 'divergence' + ".txt", result,
+                   delimiter=' ',
+                   header='string', comments='', fmt='%s')
 
 
 # insert the following ('filepath/picture_name.tif', border in picture L(int), border in picture R (int), fundamental frequency (float), ROI_y(px), harmonic number (int), "picture name for plot")
-Picture1 = FwhmImageProcessing('rotated_20190130_1\spectro1__Wed Jan 30 2019_10.27.43_1.tif', 100, 1200, 800., 50,
+Picture1 = FwhmImageProcessing('rotated_20190130_1\spectro1__Wed Jan 30 2019_10.27.43_1.tif', 100, 1200, 808., 50,
                                25, "20190123_xx")
 Picture1.open_file()
 Picture1.background()
-Picture1.select_harmonic_in_px()
 Picture1.step_function_for_fwhm()
 Picture1.save_data()
 plt.show()
