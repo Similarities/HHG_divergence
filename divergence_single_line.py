@@ -39,7 +39,7 @@ class FwhmImageProcessing:
         return self.picture
 
     def background(self):
-        back_mean = np.mean(self.picture[:, 1780:1948], axis=1)
+        back_mean = np.mean(self.picture[ :,1780:1948], axis=1)
         for x in range(0, self.y_max):
             self.x_backsubstracted[::, x] = self.picture[::, x] - back_mean[x]
         plt.figure(1)
