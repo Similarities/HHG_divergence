@@ -17,7 +17,7 @@ class FwhmImageProcessing:
         self.y_min = 0
         self.y_max = 2048
         self.x_min = 150
-        self.x_max = 900
+        self.x_max = 1200
         self.picture = np.empty([])
         self.harmonic_selected = harmonic_number
         self.x_backsubstracted = np.empty([2048, 2048])
@@ -65,8 +65,8 @@ class FwhmImageProcessing:
         self.plot_roi_on_image()
         return self.border_up, self.border_down
 
-    def nm_in_px(self, px_in):
-        return int(7.79104482e-01 * px_in ** 2 - 1.24499534e+02 * px_in + 3.38549944e+03)
+    def nm_in_px(self, wavelength_in):
+        return int(7.79104482e-01 * wavelength_in ** 2 - 1.24499534e+02 * wavelength_in + 3.38549944e+03)
 
     def plot_roi_on_image(self):
         plt.figure(1)
@@ -153,12 +153,13 @@ class FwhmImageProcessing:
         plt.scatter(x, y, label=name)
         plt.xlabel(axis_name_x)
         plt.ylabel(axis_name_y)
+        #plt.legend()
 
     def prepare_header(self):
         self.integrated_signal_in_lineout()
         self.delta_energy()
         # insert header line and change index
-        header_names = (['harmonic number', 'mrad', 'integrated counts in delta E', 'harmonic in nm', 'delta E/E'])
+        header_names = (['harmonic_number', 'mrad', 'integrated_counts_in_delta_E', 'harmonic_in_nm', 'delta_E/E'])
         parameter_info = (
             ['fundamental_nm:', str(self.lambda_fundamental), 'pixel_range:', str(self.border_down-self.border_up), 'xxxx'])
         return np.vstack((header_names, self.result_array, parameter_info))
@@ -175,8 +176,6 @@ class FwhmImageProcessing:
         np.savetxt(self.filedescription + ".txt", result, delimiter=' ',
                    header='string', comments='',
                    fmt='%s')
-
-
 
 
 
@@ -198,16 +197,17 @@ def get_file_list(path_picture):
 
 
 def process_files(my_files, path):
-    plt.close()
-    for x in range(0, len(my_files)):
+
+    for x in range(7, len(my_files)):
         file = path +'/'+ my_files[x]
         Processing_Picture = FwhmImageProcessing(file, 802, 36, 24)
         Processing_Picture.open_file()
         Processing_Picture.background_y()
         Processing_Picture.batch_over_N()
         Processing_Picture.save_data()
-
-    # plt.savefig(self.filename+ "binned" +".png",  bbox_inches="tight", dpi = 1000)
+        plt.close(1)
+        plt.close(2)
+        plt.close(5)
 
 my_files = get_file_list('rotated_20190129')
 process_files(my_files, 'rotated_20190129')
