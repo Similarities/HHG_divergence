@@ -6,6 +6,7 @@ Created on Tue Feb 19 16:54:54 2019
 
 import matplotlib.pyplot as plt
 import numpy as np
+import os
 
 
 class FwhmImageProcessing:
@@ -46,13 +47,11 @@ class FwhmImageProcessing:
         plt.vlines(self.x_max, 0, 2048)
         return self.x_backsubstracted
 
-
     def background_x(self):
         back_mean = np.mean(self.picture[1780:1948, :], axis=0)
         for x in range(0, 2048):
             self.x_backsubstracted[x, ::] = self.picture[x, ::] - back_mean[x]
         return self.x_backsubstracted
-
 
     def energy_range(self):
         print(self.harmonic_selected, ':')
@@ -128,7 +127,7 @@ class FwhmImageProcessing:
         return 1.27877896e-06 * px_number ** 2 - 1.37081526e-02 * px_number + 3.46785380e+01
 
     def delta_energy(self):
-        delta = self.px_in_nm(self.border_down) - self.px_in_nm(self.border_up)
+        delta = self.px_in_nm(self.border_up) - self.px_in_nm(self.border_down)
         energy_nm = (self.lambda_fundamental / self.harmonic_selected)
         delta_vs_energy = delta / energy_nm
         return energy_nm, delta_vs_energy
@@ -144,7 +143,6 @@ class FwhmImageProcessing:
             # clean for empty entries
         self.result_array = np.delete(self.result_array, np.where(~self.result_array.any(axis=1))[0],
                                       axis=0)
-        print(self.result_array)
         self.plot_scatter(self.result_array[::, 0], self.result_array[::, 1], self.filedescription,
                           'harmonic number N', 'divergence in mrad', 5)
         self.save_data()
@@ -167,30 +165,26 @@ class FwhmImageProcessing:
 
     def save_data(self):
         result = self.prepare_header()
-        # print(self.result_array)
         plt.figure(1)
         plt.savefig(self.filedescription + "_raw_roi_" + ".png", bbox_inches="tight", dpi=1000)
-        plt.figure(3)
+        plt.figure(2)
         plt.savefig(self.filedescription + "_integrated_lineout" + ".png", bbox_inches="tight", dpi=1000)
         plt.figure(5)
         plt.savefig(self.filedescription + "_div_mrad_FWHM" + ".png", bbox_inches="tight", dpi=1000)
-
         print('saved data')
-        np.savetxt(self.filedescription + ".txt", self.result_array, delimiter=' ',
+        np.savetxt(self.filedescription + ".txt", result, delimiter=' ',
                    header='string', comments='',
                    fmt='%s')
 
 
-import os
-plt.close()
-path_picture = "rotated_20190129/"
-save_path = "results/"
-tif_files = []
-counter = 0
+
 
 
 def get_file_list(path_picture):
+    tif_files = []
+    counter = 0
     for file in os.listdir(path_picture):
+        print(file)
         try:
             if file.endswith(".tif"):
                 tif_files.append(str(file))
@@ -199,15 +193,14 @@ def get_file_list(path_picture):
                 print("only other files found")
         except Exception as e:
             raise e
-            print("not files found here")
-
+            print("no files found here")
     return tif_files
 
-my_files = tif_files
 
-def process_files(my_files):
+def process_files(my_files, path):
+    plt.close()
     for x in range(0, len(my_files)):
-        file = path_picture + my_files[x]
+        file = path +'/'+ my_files[x]
         Processing_Picture = FwhmImageProcessing(file, 802, 36, 24)
         Processing_Picture.open_file()
         Processing_Picture.background_y()
@@ -216,6 +209,5 @@ def process_files(my_files):
 
     # plt.savefig(self.filename+ "binned" +".png",  bbox_inches="tight", dpi = 1000)
 
-
-
-print(len(tif_files), "number of files found")
+my_files = get_file_list('rotated_20190129')
+process_files(my_files, 'rotated_20190129')
