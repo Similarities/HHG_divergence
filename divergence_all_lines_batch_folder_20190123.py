@@ -17,7 +17,7 @@ class FwhmImageProcessing:
         self.y_min = 0
         self.y_max = 2048
         self.x_min = 150
-        self.x_max = 1300
+        self.x_max = 1500
         self.picture = np.empty([])
         self.harmonic_selected = harmonic_number
         self.x_backsubstracted = np.empty([2048, 2048])
@@ -39,7 +39,7 @@ class FwhmImageProcessing:
         back_mean = np.mean(self.picture[:, 1600:1700], axis=1)
         for x in range(0, self.y_max):
             self.x_backsubstracted[::, x] = self.picture[::, x] - back_mean[x]
-        self.background_x()
+        self.post_back_ground()
         plt.figure(1)
         # plt.ylim(100, 1000)
         plt.imshow(self.x_backsubstracted)
@@ -48,20 +48,26 @@ class FwhmImageProcessing:
         return self.x_backsubstracted
 
     def background_x(self):
-        back_mean = np.mean(self.picture[1880:1948, :], axis=0)
+        back_mean = np.mean(self.x_backsubstracted[1880:1948, :], axis=0)
         for x in range(0, 2048):
             self.x_backsubstracted[x, ::] = self.picture[x, ::] - back_mean[x]
         return self.x_backsubstracted
 
+    def post_back_ground(self):
+        back_post = np.mean(self.x_backsubstracted[:, self.x_max + 100: self.x_max + 250], axis=1)
+        for counter in range(0, 2048):
+            self.x_backsubstracted[::, counter] = self.x_backsubstracted[::, counter] - back_post[counter]
+        return self.x_backsubstracted
+
     def energy_range(self):
-        print(self.harmonic_selected, ':')
+        #print(self.harmonic_selected, ':')
         previous_harmonic = self.lambda_fundamental / (self.harmonic_selected - 0.3)
         next_harmonic = self.lambda_fundamental / (self.harmonic_selected + 0.3)
         self.border_up = np.int(self.nm_in_px(previous_harmonic))
         self.border_down = np.int(self.nm_in_px(next_harmonic))
-        print(self.border_up, self.border_down, "ROI in px")
+        #print(self.border_up, self.border_down, "ROI in px")
         self.pixel_range = np.int(self.border_down - self.border_up)
-        print(self.pixel_range, 'ROI in pixel range')
+       #print(self.pixel_range, 'ROI in pixel range')
         self.plot_roi_on_image()
         return self.border_up, self.border_down
 
@@ -145,7 +151,6 @@ class FwhmImageProcessing:
                                       axis=0)
         self.plot_scatter(self.result_array[::, 0], self.result_array[::, 1], self.filedescription,
                           'harmonic number N', 'divergence in mrad', 5)
-        self.save_data()
         return self.result_array
 
     def plot_scatter(self, x, y, name, axis_name_x, axis_name_y, plot_number):
@@ -153,7 +158,7 @@ class FwhmImageProcessing:
         plt.scatter(x, y, label=name)
         plt.xlabel(axis_name_x)
         plt.ylabel(axis_name_y)
-        #plt.legend()
+        # plt.legend()
 
     def prepare_header(self):
         self.integrated_signal_in_lineout()
@@ -161,11 +166,13 @@ class FwhmImageProcessing:
         # insert header line and change index
         header_names = (['harmonic_number', 'mrad', 'integrated_counts_in_delta_E', 'harmonic_in_nm', 'delta_E/E'])
         parameter_info = (
-            ['fundamental_nm:', str(self.lambda_fundamental), 'pixel_range:', str(self.border_down-self.border_up), 'xxxx'])
+            ['fundamental_nm:', str(self.lambda_fundamental), 'pixel_range:', str(self.border_down - self.border_up),
+             'x_range: ' + str(self.x_min) + ':' + str(self.x_max)])
         return np.vstack((header_names, self.result_array, parameter_info))
 
     def save_data(self):
         result = self.prepare_header()
+        print('....saving:', self.filedescription)
         plt.figure(1)
         plt.savefig(self.filedescription + "_raw_roi_" + ".png", bbox_inches="tight", dpi=1000)
         plt.figure(2)
@@ -176,7 +183,6 @@ class FwhmImageProcessing:
         np.savetxt(self.filedescription + ".txt", result, delimiter=' ',
                    header='string', comments='',
                    fmt='%s')
-
 
 
 def get_file_list(path_picture):
@@ -197,10 +203,9 @@ def get_file_list(path_picture):
 
 
 def process_files(my_files, path):
-
-    for x in range(63, 64):
-        file = path +'/'+ my_files[x]
-        Processing_Picture = FwhmImageProcessing(file, 805 , 30, 17)
+    for x in range(54, 57):
+        file = path + '/' + my_files[x]
+        Processing_Picture = FwhmImageProcessing(file, 796, 34, 17)
         Processing_Picture.open_file()
         Processing_Picture.background_y()
         Processing_Picture.batch_over_N()
@@ -208,6 +213,7 @@ def process_files(my_files, path):
         plt.close(1)
         plt.close(2)
         plt.close(5)
+
 
 my_files = get_file_list('rotated_20190123')
 process_files(my_files, 'rotated_20190123')

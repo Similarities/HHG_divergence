@@ -17,7 +17,7 @@ class FwhmImageProcessing:
         self.y_min = 0
         self.y_max = 2048
         self.x_min = 150
-        self.x_max = 1200
+        self.x_max = 1500
         self.picture = np.empty([])
         self.harmonic_selected = harmonic_number
         self.x_backsubstracted = np.empty([2048, 2048])
@@ -36,23 +36,24 @@ class FwhmImageProcessing:
         return self.picture
 
     def background_y(self):
-        back_mean = np.mean(self.picture[:, 1300:1400], axis=1)
+        back_mean = np.mean(self.picture[:, 1600:1700], axis=1)
         for x in range(0, self.y_max):
             self.x_backsubstracted[::, x] = self.picture[::, x] - back_mean[x]
-        self.post_pack_ground()
+        self.post_back_ground()
         plt.figure(1)
+        # plt.ylim(100, 1000)
         plt.imshow(self.x_backsubstracted)
         plt.vlines(self.x_min, 0, 2048)
         plt.vlines(self.x_max, 0, 2048)
         return self.x_backsubstracted
 
     def background_x(self):
-        back_mean = np.mean(self.picture[1650:1850, :], axis=0)
+        back_mean = np.mean(self.x_backsubstracted[1880:1948, :], axis=0)
         for x in range(0, 2048):
             self.x_backsubstracted[x, ::] = self.picture[x, ::] - back_mean[x]
         return self.x_backsubstracted
 
-    def post_pack_ground(self):
+    def post_back_ground(self):
         back_post = np.mean(self.x_backsubstracted[:, self.x_max + 100: self.x_max + 250], axis=1)
         for counter in range(0, 2048):
             self.x_backsubstracted[::, counter] = self.x_backsubstracted[::, counter] - back_post[counter]
@@ -71,12 +72,12 @@ class FwhmImageProcessing:
         return self.border_up, self.border_down
 
     def nm_in_px(self, wavelength_in):
-        return int(7.79104482e-01 * wavelength_in ** 2 - 1.24499534e+02 * wavelength_in + 3.38549944e+03)
+        return int(3.71756520e-01 * wavelength_in ** 2 - 9.89219185e+01 * wavelength_in + 4.50769013e+03)
 
     def plot_roi_on_image(self):
         plt.figure(1)
         plt.hlines(self.border_up, xmin=0, xmax=2048, color="w", linewidth=0.1)
-        plt.hlines(self.border_down, xmin=0, xmax=2048, color="m", linewidth=0.1)
+        plt.hlines(self.border_down, xmin=0, xmax=2048, color="g", linewidth=0.1)
 
     def sum_over_pixel_range_y(self):
         self.line_out = self.x_backsubstracted[self.border_up: self.border_down, ::]
@@ -115,8 +116,7 @@ class FwhmImageProcessing:
 
         half_max = (maximum - minimum) / 2
         # self.plot_x_y(self.line_out_x, self.line_out, 'linout_corrected', 2, 'px', 'counts')
-        self.plot_x_y(self.line_out_x * self.calibration_to_msr, self.line_out, str(self.harmonic_selected), 2, 'px',
-                      'counts')
+        self.plot_x_y(self.line_out_x, self.line_out, str(self.harmonic_selected), 2, 'px', 'counts')
         return half_max
 
     def step_function_for_fwhm(self):
@@ -130,7 +130,7 @@ class FwhmImageProcessing:
         return result_FWHM
 
     def px_in_nm(self, px_number):
-        return 1.27877896e-06 * px_number ** 2 - 1.37081526e-02 * px_number + 3.46785380e+01
+        return 1.22447518e-06 * px_number ** 2 - 1.73729829e-02 * px_number + 5.82820234e+01
 
     def delta_energy(self):
         delta = self.px_in_nm(self.border_up) - self.px_in_nm(self.border_down)
@@ -151,6 +151,7 @@ class FwhmImageProcessing:
                                       axis=0)
         self.plot_scatter(self.result_array[::, 0], self.result_array[::, 1], self.filedescription,
                           'harmonic number N', 'divergence in mrad', 5)
+        self.save_data()
         return self.result_array
 
     def plot_scatter(self, x, y, name, axis_name_x, axis_name_y, plot_number):
@@ -167,12 +168,12 @@ class FwhmImageProcessing:
         header_names = (['harmonic_number', 'mrad', 'integrated_counts_in_delta_E', 'harmonic_in_nm', 'delta_E/E'])
         parameter_info = (
             ['fundamental_nm:', str(self.lambda_fundamental), 'pixel_range:', str(self.border_down - self.border_up),
-             'xrange:' + str(self.x_min) + str(self.x_max)])
+             'x_range: ' + str(self.x_min) + ':' + str(self.x_max)])
         return np.vstack((header_names, self.result_array, parameter_info))
 
     def save_data(self):
         result = self.prepare_header()
-        print('...saving:', self.filedescription)
+        print('....saving:', self.filedescription)
         plt.figure(1)
         plt.savefig(self.filedescription + "_raw_roi_" + ".png", bbox_inches="tight", dpi=1000)
         plt.figure(2)
@@ -189,6 +190,7 @@ def get_file_list(path_picture):
     tif_files = []
     counter = 0
     for file in os.listdir(path_picture):
+        print(file)
         try:
             if file.endswith(".tif"):
                 tif_files.append(str(file))
@@ -202,9 +204,9 @@ def get_file_list(path_picture):
 
 
 def process_files(my_files, path):
-    for x in range(3, 4):
+    for x in range(0, len(my_files)):
         file = path + '/' + my_files[x]
-        Processing_Picture = FwhmImageProcessing(file, 790, 37, 24)
+        Processing_Picture = FwhmImageProcessing(file, 800, 30, 17)
         Processing_Picture.open_file()
         Processing_Picture.background_y()
         Processing_Picture.batch_over_N()
@@ -214,6 +216,5 @@ def process_files(my_files, path):
         plt.close(5)
 
 
-my_files = get_file_list('rotated_20190130')
-print(my_files)
-process_files(my_files, 'rotated_20190130')
+my_files = get_file_list('rotated_20190118')
+process_files(my_files, 'rotated_20190118')

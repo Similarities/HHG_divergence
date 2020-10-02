@@ -39,7 +39,7 @@ class FwhmImageProcessing:
         back_mean = np.mean(self.picture[:, 1780:1948], axis=1)
         for x in range(0, self.y_max):
             self.x_backsubstracted[::, x] = self.picture[::, x] - back_mean[x]
-        self.background_x()
+        self.post_back_ground()
         plt.figure(1)
         # plt.ylim(100, 1000)
         plt.imshow(self.x_backsubstracted)
@@ -48,9 +48,15 @@ class FwhmImageProcessing:
         return self.x_backsubstracted
 
     def background_x(self):
-        back_mean = np.mean(self.picture[1780:1948, :], axis=0)
+        back_mean = np.mean(self.x_backsubstracted[1780:1948, :], axis=0)
         for x in range(0, 2048):
             self.x_backsubstracted[x, ::] = self.picture[x, ::] - back_mean[x]
+        return self.x_backsubstracted
+
+    def post_back_ground(self):
+        back_post = np.mean(self.x_backsubstracted[:, self.x_max+ 100: self.x_max+250], axis = 1)
+        for counter in range(0, 2048):
+            self.x_backsubstracted[::, counter] = self.x_backsubstracted[::, counter] - back_post[counter]
         return self.x_backsubstracted
 
     def energy_range(self):
@@ -120,7 +126,7 @@ class FwhmImageProcessing:
         self.line_out_x = self.calibrate_px_to_msr(self.line_out_x)
         self.plot_x_y(self.line_out_x, d, 'stepfunction', 3, 'mrad', 'value')
         self.line_out_x = np.arange(self.x_min, self.x_max)
-        result_FWHM = 1.5 * self.calibration_to_msr * (np.amax(np.nonzero(d)) - np.amin(np.nonzero(d)))
+        result_FWHM = 1. * self.calibration_to_msr * (np.amax(np.nonzero(d)) - np.amin(np.nonzero(d)))
         return result_FWHM
 
     def px_in_nm(self, px_number):
@@ -145,7 +151,6 @@ class FwhmImageProcessing:
                                       axis=0)
         self.plot_scatter(self.result_array[::, 0], self.result_array[::, 1], self.filedescription,
                           'harmonic number N', 'divergence in mrad', 5)
-        self.save_data()
         return self.result_array
 
     def plot_scatter(self, x, y, name, axis_name_x, axis_name_y, plot_number):
@@ -161,7 +166,8 @@ class FwhmImageProcessing:
         # insert header line and change index
         header_names = (['harmonic_number', 'mrad', 'integrated_counts_in_delta_E', 'harmonic_in_nm', 'delta_E/E'])
         parameter_info = (
-            ['fundamental_nm:', str(self.lambda_fundamental), 'pixel_range:', str(self.border_down-self.border_up), 'xxxx'])
+            ['fundamental_nm:', str(self.lambda_fundamental), 'pixel_range:', str(self.border_down-self.border_up),
+             'xrange:'+str(self.x_min)+'-'+str(self.xmax)])
         return np.vstack((header_names, self.result_array, parameter_info))
 
     def save_data(self):
@@ -198,7 +204,7 @@ def get_file_list(path_picture):
 
 def process_files(my_files, path):
 
-    for x in range(7, len(my_files)):
+    for x in range(17, 18):
         file = path +'/'+ my_files[x]
         Processing_Picture = FwhmImageProcessing(file, 802, 36, 24)
         Processing_Picture.open_file()
